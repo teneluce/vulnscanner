@@ -23,5 +23,9 @@ For example:
 
 ## Next steps
 The next steps are:
+* Implement useful outputs such as html, docx and/or xlsx files
 * Adapt this tool to OT environments (i.e. passively, without using NMAP, e.g. using port mirroring)
 * Implement a GUI to make this tool more user-friendly
+
+## Improvements
+If you have suggestions to improve this project, please contact me at tenebraslucem@proton.me
