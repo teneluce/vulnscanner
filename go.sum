@@ -1,0 +1,4 @@
+github.com/knqyf263/go-cpe v0.0.0-20230627041855-cb0794d06872 h1:snH0nDYi3kizy9vxYBhZm5KXkGt9VXdGEtr6/1SGUqY=
+github.com/knqyf263/go-cpe v0.0.0-20230627041855-cb0794d06872/go.mod h1:4cVhzV/TndScEg4xMtSo3TTz3cMFhEAvhAA4igAyXZY=
+github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
+github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

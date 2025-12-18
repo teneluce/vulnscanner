@@ -1,0 +1,20 @@
+# Go
+/bin/
+/pkg/
+*.exe
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+EOF
+
+# Environment variables
+.env
+
+# Executable
+vulnscanner
