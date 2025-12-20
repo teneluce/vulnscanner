@@ -15,15 +15,16 @@ Vulnscanner is kind of a vulnerability scanner developed in Go, based on NMAP. B
 ## How to use it
 You have to specify the IP addresses that you want to scan. You also have to have root priviledges (to launch NMAP).
 For example:
-```sudo vulnscanner 192.168.1.1```
+```sudo vulnscanner -c -r 192.168.1.1```
 
 ## Options
 * ```-v```: verbose mode, to have the running details
 * ```-c```: get the cves related to cpes (if you don't, it will only show CPEs)
+* ```-r```: generate an html output file (generated in ./output/html) (Don't specify an output filename as it will be generated automatically with the timestamp)
 
 ## Next steps
 The next steps are:
-* Implement useful outputs such as html, docx and/or xlsx files
+* Implement docx and/or xlsx output files
 * Adapt this tool to OT environments (i.e. passively, without using NMAP, e.g. using port mirroring)
 * Implement a GUI to make this tool more user-friendly
 

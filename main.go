@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/teneluce/vulnscanner/nvd"
+	"github.com/teneluce/vulnscanner/report"
 	"github.com/teneluce/vulnscanner/scanner"
 )
 
@@ -18,6 +19,7 @@ func main() {
 
 	verbose := false
 	fetchCVE := false
+	generateHTML := false
 	apiKey := loadAPIKeyFromEnv()
 	var ips []string
 
@@ -27,6 +29,8 @@ func main() {
 			verbose = true
 		} else if arg == "-c" || arg == "--cve" {
 			fetchCVE = true
+		} else if arg == "-r" || arg == "--report" {
+			generateHTML = true
 		} else {
 			ips = append(ips, arg)
 		}
@@ -60,10 +64,27 @@ func main() {
 			fmt.Println("Warning: No API key found in .env (rate limit: 5 req/30s)")
 		}
 	}
+	if generateHTML {
+		fmt.Println("HTML report will be generated in ./output/html/")
+	}
 	fmt.Println()
 
 	results := s.ScanIPs(ips)
-	displayResults(results, fetchCVE, apiKey)
+
+	if fetchCVE {
+		results = enrichWithCVEs(results, apiKey)
+	}
+
+	displayResults(results, fetchCVE)
+
+	if generateHTML {
+		outputFile, err := report.GenerateHTML(results)
+		if err != nil {
+			fmt.Printf("Error generating HTML report: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("\nHTML report generated: %s\n", outputFile)
+	}
 }
 
 func loadAPIKeyFromEnv() string {
@@ -88,11 +109,34 @@ func loadAPIKeyFromEnv() string {
 	return ""
 }
 
+func enrichWithCVEs(results []scanner.ScanResult, apiKey string) []scanner.ScanResult {
+	nvdClient := nvd.NewClient(apiKey)
+
+	for i := range results {
+		if results[i].Err != nil {
+			continue
+		}
+
+		for j := range results[i].CPEs {
+			fmt.Printf("Searching CVEs for %s...\n", results[i].CPEs[j].Value)
+			cves, err := nvdClient.GetCVEsForCPE(results[i].CPEs[j].Value)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				continue
+			}
+			results[i].CPEs[j].CVEs = cves
+		}
+	}
+
+	return results
+}
+
 func printUsage() {
 	fmt.Println("Usage: vulnscanner [OPTIONS] <IP1> <IP2> ... <IPN>")
 	fmt.Println("\nOptions:")
-	fmt.Println("  -v, --verbose    Verbose mode (show CPE mappings)")
-	fmt.Println("  -c, --cve        Fetch CVEs from NVD API")
+	fmt.Println("  -v, --verbose      Verbose mode (show CPE mappings)")
+	fmt.Println("  -c, --cve          Fetch CVEs from NVD API")
+	fmt.Println("  -r, --report       Generate HTML report in ./output/html/")
 	fmt.Println("\nAPI Key:")
 	fmt.Println("  Create a .env file with: NIST_API_KEY=your_key_here")
 	fmt.Println("  Get a free API key at: https://nvd.nist.gov/developers/request-an-api-key")
@@ -100,21 +144,16 @@ func printUsage() {
 	fmt.Println("  vulnscanner 192.168.1.1")
 	fmt.Println("  vulnscanner -v 192.168.1.1 192.168.1.2")
 	fmt.Println("  vulnscanner -c 192.168.1.1")
-	fmt.Println("  vulnscanner -v -c 192.168.1.1")
+	fmt.Println("  vulnscanner -c -r 192.168.1.1")
 }
 
-func displayResults(results []scanner.ScanResult, fetchCVE bool, apiKey string) {
+func displayResults(results []scanner.ScanResult, fetchCVE bool) {
 	fmt.Println(strings.Repeat("=", 70))
 	fmt.Println("                       SCAN RESULTS")
 	fmt.Println(strings.Repeat("=", 70))
 
 	totalCPEs := 0
 	totalCVEs := 0
-
-	var nvdClient *nvd.Client
-	if fetchCVE {
-		nvdClient = nvd.NewClient(apiKey)
-	}
 
 	for _, result := range results {
 		fmt.Printf("\nIP: %s\n", result.IP)
@@ -131,31 +170,22 @@ func displayResults(results []scanner.ScanResult, fetchCVE bool, apiKey string) 
 		}
 
 		fmt.Printf("%d CPE(s) found (NIST format):\n", len(result.CPEs))
-		for _, cpe := range result.CPEs {
-			fmt.Printf("  - %s\n", cpe)
+		for _, cpeItem := range result.CPEs {
+			fmt.Printf("  - %s\n", cpeItem.Value)
 			totalCPEs++
 
-			if fetchCVE && nvdClient != nil {
-				fmt.Printf("    Searching for CVEs...\n")
-				cves, err := nvdClient.GetCVEsForCPE(cpe)
-				if err != nil {
-					fmt.Printf("    Error: %v\n", err)
-					continue
-				}
-
-				if len(cves) == 0 {
-					fmt.Printf("    No CVE found\n")
-				} else {
-					fmt.Printf("    %d CVE(s) found:\n", len(cves))
-					for _, cve := range cves {
-						severity := "N/A"
-						if cve.BaseScore > 0 {
-							severity = fmt.Sprintf("%.1f (%s)", cve.BaseScore, cve.Severity)
-						}
-						fmt.Printf("      * %s [%s] %s\n", cve.ID, severity, truncate(cve.Description, 60))
-						totalCVEs++
+			if fetchCVE && len(cpeItem.CVEs) > 0 {
+				fmt.Printf("    %d CVE(s) found:\n", len(cpeItem.CVEs))
+				for _, cve := range cpeItem.CVEs {
+					severity := "N/A"
+					if cve.BaseScore > 0 {
+						severity = fmt.Sprintf("%.1f (%s)", cve.BaseScore, cve.Severity)
 					}
+					fmt.Printf("      * %s [%s] %s\n", cve.ID, severity, truncate(cve.Description, 60))
+					totalCVEs++
 				}
+			} else if fetchCVE {
+				fmt.Printf("    No CVE found\n")
 			}
 		}
 	}
