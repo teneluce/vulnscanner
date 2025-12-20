@@ -10,6 +10,7 @@ import (
 
 	"github.com/knqyf263/go-cpe/naming"
 	"github.com/teneluce/vulnscanner/cpe_mapping"
+	"github.com/teneluce/vulnscanner/nvd"
 )
 
 type NmapRun struct {
@@ -54,8 +55,13 @@ type CPE struct {
 
 type ScanResult struct {
 	IP   string
-	CPEs []string
+	CPEs []CPEItem
 	Err  error
+}
+
+type CPEItem struct {
+	Value string
+	CVEs  []nvd.CVE
 }
 
 type Scanner struct {
@@ -128,7 +134,7 @@ func (s *Scanner) scanSingleIP(ip string) ScanResult {
 	}
 
 	for cpe := range cpeSet {
-		result.CPEs = append(result.CPEs, cpe)
+		result.CPEs = append(result.CPEs, CPEItem{Value: cpe})
 	}
 
 	return result
